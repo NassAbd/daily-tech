@@ -267,6 +267,17 @@
       text-transform: uppercase;
       color: var(--text-muted);
       margin-bottom: 1.25rem;
+      width: 100%;
+      background: none;
+      border: none;
+      padding: 0;
+      font-family: inherit;
+      cursor: pointer;
+      transition: color var(--transition);
+    }
+
+    .section-label:hover {
+      color: var(--text-secondary);
     }
 
     .section-label::after {
@@ -274,6 +285,33 @@
       flex: 1;
       height: 1px;
       background: var(--border);
+      margin: 0 0.5rem;
+    }
+
+    .toggle-icon {
+      font-size: 0.6rem;
+      transition: transform var(--transition);
+      color: var(--text-muted);
+    }
+
+    .briefing-card.collapsed .toggle-icon {
+      transform: rotate(-90deg);
+    }
+
+    .briefing-content {
+      overflow: hidden;
+      transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+      max-height: 2000px;
+      opacity: 1;
+    }
+
+    .briefing-card.collapsed .briefing-content {
+      max-height: 0;
+      opacity: 0;
+    }
+
+    .briefing-card.collapsed .section-label {
+      margin-bottom: 0;
     }
 
     .briefing-text {
@@ -444,9 +482,14 @@
     </div>
 
     <!-- Briefing Text Card -->
-    <div id="briefing-card" class="briefing-card" style="display:none;">
-      <div class="section-label">Transcription du briefing</div>
-      <p class="briefing-text" id="briefing-text">—</p>
+    <div id="briefing-card" class="briefing-card collapsed" style="display:none;">
+      <button id="briefing-toggle" class="section-label" aria-expanded="false" aria-controls="briefing-content">
+        Transcription du briefing
+        <span class="toggle-icon" aria-hidden="true">▼</span>
+      </button>
+      <div id="briefing-content" class="briefing-content">
+        <p class="briefing-text" id="briefing-text">—</p>
+      </div>
     </div>
 
     <!-- Footer -->
@@ -478,6 +521,17 @@
       const statusBar    = $('status-bar');
       const playerCard   = $('player-card');
       const briefingCard = $('briefing-card');
+      const briefingToggle = $('briefing-toggle');
+
+      /**
+       * Toggle the visibility of the briefing card content.
+       */
+      function toggleBriefing() {
+        const isCollapsed = briefingCard.classList.toggle('collapsed');
+        briefingToggle.setAttribute('aria-expanded', !isCollapsed);
+      }
+
+      briefingToggle.addEventListener('click', toggleBriefing);
 
       /**
        * Formate une date ISO en français lisible.
