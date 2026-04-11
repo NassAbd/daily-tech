@@ -1,0 +1,74 @@
+name: Echo-Tech Daily — Briefing IA Quotidien
+
+on:
+  schedule:
+    # Déclenchement chaque jour à 07:00 UTC
+    - cron: '0 7 * * *'
+  # Permet le déclenchement manuel depuis l'onglet "Actions" de GitHub
+  workflow_dispatch:
+
+permissions:
+  contents: write   # Nécessaire pour git push depuis l'Action
+
+jobs:
+  generate-briefing:
+    name: Générer et déployer le briefing du jour
+    runs-on: ubuntu-latest
+
+    steps:
+      # ----------------------------------------------------------------
+      # 1. Checkout complet (historique nécessaire pour le push propre)
+      # ----------------------------------------------------------------
+      - name: Checkout du dépôt
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ----------------------------------------------------------------
+      # 2. Installation de Python + uv
+      # ----------------------------------------------------------------
+      - name: Installer uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+
+      - name: Configurer Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # ----------------------------------------------------------------
+      # 3. Installation des dépendances via uv
+      # ----------------------------------------------------------------
+      - name: Installer les dépendances
+        run: uv sync
+
+      # ----------------------------------------------------------------
+      # 4. Exécution du pipeline principal
+      # ----------------------------------------------------------------
+      - name: Générer le briefing (RSS → Gemini → TTS → JSON)
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          TTS_VOICE_NAME: ${{ vars.TTS_VOICE_NAME || 'Charon' }}
+          MAX_ARTICLES: ${{ vars.MAX_ARTICLES || '10' }}
+        run: uv run python scripts/main.py
+
+      # ----------------------------------------------------------------
+      # 5. Commit et push des fichiers générés
+      # ----------------------------------------------------------------
+      - name: Committer et pousser les fichiers générés
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Ajouter uniquement les fichiers gérés par le pipeline
+          git add data.json audio/latest_report.wav
+
+          # Ne créer un commit que s'il y a des changements
+          if git diff --cached --quiet; then
+            echo "Aucun changement détecté — rien à committer."
+          else
+            git commit -m "chore(briefing): mise à jour automatique du $(date -u '+%Y-%m-%d') [skip ci]"
+            git push
+            echo "✅ Briefing mis à jour et poussé sur la branche main."
+          fi
