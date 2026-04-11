@@ -1,14 +1,14 @@
 """
-Echo-Tech Daily — Pipeline principal
-=====================================
-Flux : TechCrunch RSS (IA) → Gemini 2.5 Flash (résumé FR) → Gemini TTS (WAV) → data.json
+Echo-Tech Daily — Main Pipeline
+===============================
+Flow: TechCrunch RSS (AI) → Gemini 2.5 Flash (FR summary) → Gemini TTS (WAV) → data.json
 
 Usage:
     uv run python scripts/main.py           # Production
-    uv run python scripts/main.py --dry-run # Mode hors-ligne (fixture locale)
+    uv run python scripts/main.py --dry-run # Offline mode (local fixture)
 
-Type check : uvx ty check scripts/main.py
-Lint       : uvx ruff check scripts/
+Type check: uvx ty check scripts/main.py
+Lint      : uvx ruff check scripts/
 """
 
 from __future__ import annotations
@@ -29,7 +29,7 @@ from google import genai
 from google.genai import types
 
 # ---------------------------------------------------------------------------
-# Constantes
+# Constants
 # ---------------------------------------------------------------------------
 
 RSS_URL = "https://techcrunch.com/category/artificial-intelligence/feed/"
@@ -41,7 +41,7 @@ WINDOW_HOURS = 24
 DEFAULT_VOICE = "Charon"
 
 # ---------------------------------------------------------------------------
-# Schéma de données (Contract-First)
+# Data Schema (Contract-First)
 # ---------------------------------------------------------------------------
 
 
@@ -69,25 +69,25 @@ def _utcnow() -> datetime:
 
 
 def _struct_to_dt(struct_time: time.struct_time) -> datetime:
-    """Convertit un struct_time (feedparser) en datetime UTC aware."""
+    """Converts a struct_time (feedparser) into an aware UTC datetime."""
     return datetime(*struct_time[:6], tzinfo=timezone.utc)
 
 
 # ---------------------------------------------------------------------------
-# Étape 1 — Récupération du flux RSS
+# Step 1 — RSS Feed Retrieval
 # ---------------------------------------------------------------------------
 
 
 def fetch_recent_articles(rss_url: str, window_hours: int = WINDOW_HOURS) -> list[ArticleItem]:
     """
-    Récupère les articles publiés durant les `window_hours` dernières heures.
-    Retourne une liste d'ArticleItem triée du plus récent au plus ancien.
+    Retrieves articles published during the last `window_hours` hours.
+    Returns a list of ArticleItem sorted from most recent to oldest.
     """
     print(f"[RSS] Fetching feed: {rss_url}")
     feed = feedparser.parse(rss_url)
 
     if feed.bozo:
-        # bozo=True indique une erreur de parsing, mais les entrées peuvent quand même exister
+        # bozo=True indicates a parsing error, but entries might still exist
         print(f"[RSS] Warning: feed parsed with errors — {feed.bozo_exception}")
 
     cutoff = _utcnow() - timedelta(hours=window_hours)
@@ -102,7 +102,7 @@ def fetch_recent_articles(rss_url: str, window_hours: int = WINDOW_HOURS) -> lis
 
         articles.append(
             ArticleItem(
-                title=entry.get("title", "Sans titre"),
+                title=entry.get("title", "No title"),
                 summary=entry.get("summary", entry.get("description", "")),
                 link=entry.get("link", ""),
                 published=published_dt.isoformat(),
@@ -110,24 +110,24 @@ def fetch_recent_articles(rss_url: str, window_hours: int = WINDOW_HOURS) -> lis
         )
 
     articles.sort(key=lambda a: a["published"], reverse=True)
-    print(f"[RSS] {len(articles)} article(s) trouvé(s) dans les {window_hours} dernières heures.")
+    print(f"[RSS] {len(articles)} article(s) found in the last {window_hours} hours.")
     return articles
 
 
 def _build_articles_text(articles: list[ArticleItem]) -> str:
-    """Formate les articles en bloc de texte pour le prompt Gemini."""
+    """Formats articles into a text block for the Gemini prompt."""
     lines: list[str] = []
     for i, art in enumerate(articles, start=1):
         lines.append(f"### Article {i} — {art['title']}")
-        lines.append(f"Publié : {art['published']}")
-        lines.append(f"Lien : {art['link']}")
+        lines.append(f"Published: {art['published']}")
+        lines.append(f"Link: {art['link']}")
         lines.append(art["summary"])
         lines.append("")
     return "\n".join(lines)
 
 
 # ---------------------------------------------------------------------------
-# Étape 2 — Résumé & traduction via Gemini Flash
+# Step 2 — Summary & Translation via Gemini Flash
 # ---------------------------------------------------------------------------
 
 SYSTEM_PROMPT = """\
@@ -146,7 +146,7 @@ Tu NE dois PAS inventer d'informations : base-toi uniquement sur les articles fo
 
 def generate_briefing(client: genai.Client, articles: list[ArticleItem]) -> str:
     """
-    Envoie les articles à Gemini 2.5 Flash et retourne le texte du briefing en français.
+    Sends articles to Gemini 2.5 Flash and returns the briefing text in French.
     """
     today_str = _utcnow().strftime("%d %B %Y")
     articles_text = _build_articles_text(articles)
@@ -158,7 +158,7 @@ def generate_briefing(client: genai.Client, articles: list[ArticleItem]) -> str:
         "Génère le briefing matinal radio en français."
     )
 
-    print(f"[LLM] Génération du briefing avec {TEXT_MODEL}...")
+    print(f"[LLM] Generating briefing with {TEXT_MODEL}...")
     response = client.models.generate_content(
         model=TEXT_MODEL,
         contents=user_message,
@@ -170,35 +170,35 @@ def generate_briefing(client: genai.Client, articles: list[ArticleItem]) -> str:
     )
 
     if response.text is None:
-        raise ValueError("[LLM] Erreur : La réponse de Gemini ne contient pas de texte.")
+        raise ValueError("[LLM] Error: Gemini response contains no text.")
     briefing = response.text.strip()
-    print(f"[LLM] Briefing généré ({len(briefing)} caractères).")
+    print(f"[LLM] Briefing generated ({len(briefing)} characters).")
     return briefing
 
 
 # ---------------------------------------------------------------------------
-# Étape 3 — Synthèse vocale via Gemini TTS
+# Step 3 — Speech Synthesis via Gemini TTS
 # ---------------------------------------------------------------------------
 
 
 def _save_wav(path: Path, pcm_data: bytes) -> None:
-    """Sauvegarde les données PCM brutes dans un fichier WAV (mono, 24kHz, 16-bit)."""
+    """Saves raw PCM data into a WAV file (mono, 24kHz, 16-bit)."""
     path.parent.mkdir(parents=True, exist_ok=True)
     with wave.open(str(path), "wb") as wf:
         wf.setnchannels(1)
         wf.setsampwidth(2)  # 16-bit = 2 bytes
         wf.setframerate(24000)
         wf.writeframes(pcm_data)
-    print(f"[TTS] Audio sauvegardé : {path} ({path.stat().st_size / 1024:.1f} KB)")
+    print(f"[TTS] Audio saved: {path} ({path.stat().st_size / 1024:.1f} KB)")
 
 
 def generate_audio(
     client: genai.Client, briefing_text: str, voice_name: str = DEFAULT_VOICE
 ) -> None:
     """
-    Transforme le texte du briefing en audio WAV via Gemini TTS.
+    Transforms the briefing text into WAV audio via Gemini TTS.
     """
-    print(f"[TTS] Synthèse vocale avec {TTS_MODEL} (voix: {voice_name})...")
+    print(f"[TTS] Speech synthesis with {TTS_MODEL} (voice: {voice_name})...")
     response = client.models.generate_content(
         model=TTS_MODEL,
         contents=briefing_text,
@@ -215,31 +215,31 @@ def generate_audio(
     )
 
     candidates = response.candidates
-    assert candidates, "[TTS] Erreur : aucun candidat dans la réponse TTS."
+    assert candidates, "[TTS] Error: no candidate in the TTS response."
 
     content = candidates[0].content
     if content is None or content.parts is None:
-        raise ValueError("[TTS] Erreur : contenu ou parties manquantes dans la réponse TTS.")
+        raise ValueError("[TTS] Error: missing content or parts in the TTS response.")
 
     parts = content.parts
     if not parts or parts[0].inline_data is None:
-        raise ValueError("[TTS] Erreur : aucune donnée inline dans la réponse TTS.")
+        raise ValueError("[TTS] Error: no inline data in the TTS response.")
 
     pcm_data = parts[0].inline_data.data
     if pcm_data is None:
-        raise ValueError("[TTS] Erreur : données audio (bytes) vides.")
+        raise ValueError("[TTS] Error: empty audio data (bytes).")
 
     _save_wav(AUDIO_PATH, pcm_data)
 
 
 # ---------------------------------------------------------------------------
-# Étape 4 — Export data.json
+# Step 4 — Export data.json
 # ---------------------------------------------------------------------------
 
 
 def write_data_json(articles: list[ArticleItem], briefing_text: str) -> DailyReport:
     """
-    Génère et écrit `data.json` avec les métadonnées du briefing du jour.
+    Generates and writes `data.json` with the metadata for the day's briefing.
     """
     now = _utcnow()
     day_fr = now.strftime("%d %B %Y")
@@ -252,12 +252,12 @@ def write_data_json(articles: list[ArticleItem], briefing_text: str) -> DailyRep
     }
 
     DATA_JSON_PATH.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"[JSON] data.json mis à jour ({report['article_count']} articles).")
+    print(f"[JSON] data.json updated ({report['article_count']} articles).")
     return report
 
 
 # ---------------------------------------------------------------------------
-# Fixture hors-ligne (--dry-run)
+# Offline Fixture (--dry-run)
 # ---------------------------------------------------------------------------
 
 DRY_RUN_ARTICLES: list[ArticleItem] = [
@@ -283,20 +283,20 @@ DRY_RUN_ARTICLES: list[ArticleItem] = [
 
 
 def dry_run() -> None:
-    """Mode hors-ligne : génère un data.json de test sans appeler l'API."""
-    print("[DRY-RUN] Mode hors-ligne activé — aucun appel API.")
+    """Offline mode: generates a test data.json without calling the API."""
+    print("[DRY-RUN] Offline mode enabled — no API calls.")
     fake_briefing = (
         "Bonjour et bienvenue dans ce briefing de test ! "
         "Aujourd'hui, deux grandes annonces dans le monde de l'IA... "
         "Ceci est un texte de démonstration généré sans appel API. Bonne journée !"
     )
     report = write_data_json(DRY_RUN_ARTICLES, fake_briefing)
-    print(f"[DRY-RUN] Rapport fictif généré : {report['title']}")
-    print("[DRY-RUN] Note : aucun fichier audio produit en mode --dry-run.")
+    print(f"[DRY-RUN] Fictional report generated: {report['title']}")
+    print("[DRY-RUN] Note: no audio file produced in --dry-run mode.")
 
 
 # ---------------------------------------------------------------------------
-# Point d'entrée
+# Entry Point
 # ---------------------------------------------------------------------------
 
 
@@ -307,7 +307,7 @@ def main() -> None:
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Mode hors-ligne : génère un data.json fictif sans appeler l'API Gemini.",
+        help="Offline mode: generates a fictional data.json without calling the Gemini API.",
     )
     args = parser.parse_args()
 
@@ -317,7 +317,7 @@ def main() -> None:
 
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
-        print("[ERREUR] La variable d'environnement GEMINI_API_KEY est manquante.", file=sys.stderr)
+        print("[ERROR] GEMINI_API_KEY environment variable is missing.", file=sys.stderr)
         sys.exit(1)
 
     voice_name = os.getenv("TTS_VOICE_NAME", DEFAULT_VOICE)
@@ -325,25 +325,25 @@ def main() -> None:
 
     client = genai.Client(api_key=api_key)
 
-    # --- Étape 1 : RSS ---
+    # --- Step 1: RSS ---
     articles = fetch_recent_articles(RSS_URL)
 
     if not articles:
-        print("[WARN] Aucun article trouvé dans les 24 dernières heures. Pipeline arrêté.")
+        print("[WARN] No articles found in the last 24 hours. Pipeline stopped.")
         sys.exit(0)
 
     articles = articles[:max_articles]
 
-    # --- Étape 2 : Briefing textuel ---
+    # --- Step 2: Text Briefing ---
     briefing_text = generate_briefing(client, articles)
 
-    # --- Étape 3 : Synthèse vocale ---
+    # --- Step 3: Speech Synthesis ---
     generate_audio(client, briefing_text, voice_name=voice_name)
 
-    # --- Étape 4 : Export JSON ---
+    # --- Step 4: JSON Export ---
     write_data_json(articles, briefing_text)
 
-    print("[OK] Pipeline Echo-Tech Daily terminé avec succès.")
+    print("[OK] Echo-Tech Daily pipeline completed successfully.")
 
 
 if __name__ == "__main__":
