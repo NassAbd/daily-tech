@@ -1,6 +1,6 @@
 # Echo-Tech Daily 🎙️
 
-> **Votre briefing quotidien sur l'Intelligence Artificielle**, récupéré, synthétisé en français et lu par une IA — automatiquement chaque matin à 07:00 UTC.
+> **Un briefing quotidien sur l'Intelligence Artificielle**, récupéré, synthétisé en français et lu par une IA — automatiquement chaque matin à 07:00 UTC.
 
 ---
 
@@ -32,8 +32,8 @@ GitHub Pages — index.html charge data.json et diffuse l'audio
 ### Étape 1 — Forker / Cloner ce dépôt
 
 ```bash
-git clone https://github.com/VOTRE-USERNAME/dailytech.git
-cd dailytech
+git clone https://github.com/VOTRE-USERNAME/daily-tech.git
+cd daily-tech
 ```
 
 ### Étape 2 — Ajouter la clé API Gemini dans les secrets GitHub
@@ -64,7 +64,7 @@ Dans **Settings → Secrets and variables → Actions → Variables**, vous pouv
 
 Votre site sera accessible à l'adresse :
 ```
-https://VOTRE-USERNAME.github.io/dailytech/
+https://VOTRE-USERNAME.github.io/daily-tech/
 ```
 
 ---
@@ -82,7 +82,7 @@ Pour forcer la génération d'un briefing immédiatement sans attendre 07:00 UTC
 ## 🛠️ Développement local
 
 ### Prérequis
-- [uv](https://docs.astral.sh/uv/getting-started/installation/) installé (`curl -LsSf https://astral.sh/uv/install.sh | sh`)
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) installé
 
 ### Installation
 
