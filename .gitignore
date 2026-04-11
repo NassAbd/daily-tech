@@ -16,7 +16,7 @@ Thumbs.db
 
 # Audio (optional: ignore if you don't want to track local generations)
 # Note: GitHub Actions will still commit latest_report.wav to the repo
-audio/latest_report.wav
+#audio/latest_report.wav
 
 # IDEs
 .vscode/
