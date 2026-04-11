@@ -1,5 +1,9 @@
 # Echo-Tech Daily 🎙️
 
+<p align="center">
+  <img src="./screenshot.png" alt="Echo-Tech Daily"/>
+</p>
+
 > **Un briefing quotidien sur l'Intelligence Artificielle**, récupéré, synthétisé en français et lu par une IA — automatiquement chaque matin à 07:00 UTC.
 
 ---
