@@ -4,7 +4,7 @@
   <img src="./screenshot.png" alt="Echo-Tech Daily"/>
 </p>
 
-> **Un briefing quotidien sur l'Intelligence Artificielle**, récupéré, synthétisé en français et lu par une IA — automatiquement chaque matin à 07:00 UTC.
+> **Un briefing quotidien personnalisé**, récupéré, synthétisé en français et lu par une IA — automatiquement chaque matin à 07:00 UTC.
 
 [🌐 Live Demo](https://NassAbd.github.io/daily-tech/)
 
@@ -13,7 +13,7 @@
 ## Comment ça fonctionne ?
 
 ```
-TechCrunch RSS (IA)
+TechCrunch RSS (Configurable)
       │
       ▼
 feedparser — filtre les 24 dernières heures
@@ -60,6 +60,8 @@ Dans **Settings → Secrets and variables → Actions → Variables**, vous pouv
 |----------|-------------------|-------------|
 | `TTS_VOICE_NAME` | `Charon` | Voix TTS : `Charon` (M), `Kore` (F), `Aoede` (F), `Lede` (F) |
 | `MAX_ARTICLES` | `10` | Nombre maximum d'articles à traiter |
+| `RSS_FEED_URL` | `https://techcrunch.com/category/artificial-intelligence/feed/` | URL du flux RSS à surveiller |
+| `TOPIC_NAME` | `Tech` | Nom de la thématique affiché dans le rapport |
 
 ### Étape 4 — Activer GitHub Pages
 
@@ -80,7 +82,7 @@ https://VOTRE-USERNAME.github.io/daily-tech/
 Pour forcer la génération d'un briefing immédiatement sans attendre 07:00 UTC :
 
 1. Allez dans l'onglet **Actions** de votre dépôt.
-2. Sélectionnez le workflow **"Echo-Tech Daily — Briefing IA Quotidien"**.
+2. Sélectionnez le workflow **"Echo-Tech Daily — Briefing Quotidien"**.
 3. Cliquez sur **"Run workflow"** → **"Run workflow"**.
 
 ---

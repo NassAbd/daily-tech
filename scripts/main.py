@@ -1,7 +1,7 @@
 """
 Echo-Tech Daily — Main Pipeline
 ===============================
-Flow: TechCrunch RSS (AI) → Gemini 2.5 Flash (FR summary) → Gemini TTS (WAV) → data.json
+Flow: TechCrunch RSS → Gemini 2.5 Flash (FR summary) → Gemini TTS (WAV) → data.json
 
 Usage:
     uv run python scripts/main.py           # Production
@@ -32,7 +32,7 @@ from google.genai import types
 # Constants
 # ---------------------------------------------------------------------------
 
-RSS_URL = "https://techcrunch.com/category/artificial-intelligence/feed/"
+DEFAULT_RSS_URL = "https://techcrunch.com/category/artificial-intelligence/feed/"
 TEXT_MODEL = "gemini-2.5-flash"
 TTS_MODEL = "gemini-2.5-flash-preview-tts"
 AUDIO_PATH = Path("audio/latest_report.wav")
@@ -131,8 +131,8 @@ def _build_articles_text(articles: list[ArticleItem]) -> str:
 # ---------------------------------------------------------------------------
 
 SYSTEM_PROMPT = """\
-Tu es un présentateur radio professionnel, dynamique et passionné par la technologie.
-Ta mission : rédiger un briefing matinal IA en français, fluide et captivant,
+Tu es un présentateur radio professionnel, dynamique et expert en vulgarisation de l'actualité.
+Ta mission : rédiger un briefing matinal en français, fluide et captivant,
 à partir des articles fournis. Le briefing doit :
 - Commencer par une accroche percutante incluant la date du jour fournie.
 - Présenter chaque actualité de façon concise, claire et engageante.
@@ -157,7 +157,7 @@ def generate_briefing(client: genai.Client, articles: list[ArticleItem]) -> str:
 
     user_message = (
         f"Date du jour : {today_str}\n\n"
-        f"Voici {len(articles)} articles IA publiés ces dernières 24 heures :\n\n"
+        f"Voici {len(articles)} articles publiés ces dernières 24 heures :\n\n"
         f"{articles_text}\n\n"
         "Génère le briefing matinal radio en français."
     )
@@ -248,9 +248,10 @@ def write_data_json(articles: list[ArticleItem], briefing_text: str) -> DailyRep
     now = _utcnow()
     day_fr = now.strftime("%d %B %Y")
 
+    topic = os.getenv("TOPIC_NAME", "Tech")
     report: DailyReport = {
         "date": now.isoformat(),
-        "title": f"Briefing IA du {day_fr}",
+        "title": f"Briefing {topic} du {day_fr}",
         "summary": briefing_text,
         "article_count": len(articles),
     }
@@ -291,7 +292,7 @@ def dry_run() -> None:
     print("[DRY-RUN] Offline mode enabled — no API calls.")
     fake_briefing = (
         "Bonjour et bienvenue dans ce briefing de test ! "
-        "Aujourd'hui, deux grandes annonces dans le monde de l'IA... "
+        "Aujourd'hui, deux grandes annonces à la une de l'actualité... "
         "Ceci est un texte de démonstration généré sans appel API. Bonne journée !"
     )
     report = write_data_json(DRY_RUN_ARTICLES, fake_briefing)
@@ -330,7 +331,8 @@ def main() -> None:
     client = genai.Client(api_key=api_key)
 
     # --- Step 1: RSS ---
-    articles = fetch_recent_articles(RSS_URL)
+    rss_url = os.getenv("RSS_FEED_URL", DEFAULT_RSS_URL)
+    articles = fetch_recent_articles(rss_url)
 
     if not articles:
         print("[WARN] No articles found in the last 24 hours. Pipeline stopped.")

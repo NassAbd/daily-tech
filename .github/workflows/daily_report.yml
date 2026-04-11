@@ -1,4 +1,4 @@
-name: Echo-Tech Daily — Daily AI Briefing
+name: Echo-Tech Daily — Daily Briefing
 
 on:
   schedule:
@@ -51,6 +51,8 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           TTS_VOICE_NAME: ${{ vars.TTS_VOICE_NAME || 'Charon' }}
           MAX_ARTICLES: ${{ vars.MAX_ARTICLES || '10' }}
+          RSS_FEED_URL: ${{ vars.RSS_FEED_URL || '' }}
+          TOPIC_NAME: ${{ vars.TOPIC_NAME || '' }}
         run: uv run python scripts/main.py
 
       # ----------------------------------------------------------------

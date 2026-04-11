@@ -15,7 +15,7 @@ __pycache__/
 Thumbs.db
 
 # Audio (optional: ignore if you don't want to track local generations)
-# Note: GitHub Actions will still commit latest_report.wav to the repo
+# Note: GitHub Actions won't commit in case the audio is ignored
 #audio/latest_report.wav
 
 # IDEs
