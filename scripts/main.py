@@ -248,7 +248,7 @@ def write_data_json(articles: list[ArticleItem], briefing_text: str) -> DailyRep
     now = _utcnow()
     day_fr = now.strftime("%d %B %Y")
 
-    topic = os.getenv("TOPIC_NAME", "Tech")
+    topic = os.getenv("TOPIC_NAME") or "Tech"
     report: DailyReport = {
         "date": now.isoformat(),
         "title": f"Briefing {topic} du {day_fr}",
@@ -325,13 +325,13 @@ def main() -> None:
         print("[ERROR] GEMINI_API_KEY environment variable is missing.", file=sys.stderr)
         sys.exit(1)
 
-    voice_name = os.getenv("TTS_VOICE_NAME", DEFAULT_VOICE)
-    max_articles = int(os.getenv("MAX_ARTICLES", "10"))
+    voice_name = os.getenv("TTS_VOICE_NAME") or DEFAULT_VOICE
+    max_articles = int(os.getenv("MAX_ARTICLES") or "10")
 
     client = genai.Client(api_key=api_key)
 
     # --- Step 1: RSS ---
-    rss_url = os.getenv("RSS_FEED_URL", DEFAULT_RSS_URL)
+    rss_url = os.getenv("RSS_FEED_URL") or DEFAULT_RSS_URL
     articles = fetch_recent_articles(rss_url)
 
     if not articles:
